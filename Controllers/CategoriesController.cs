@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoppingListTracker.Models;
+using ShoppingListTracker.Models.DTO;
 
 namespace ShopList.Controllers
 {
@@ -22,23 +23,57 @@ namespace ShopList.Controllers
 
         // GET: api/Categories
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Category>>> GetCategories()
+        public async Task<ActionResult<IEnumerable<CategoryDto>>> GetCategories()
         {
-            return await _context.Categories.ToListAsync();
+            var categories = await _context.Categories
+                .Include(c => c.Items)  // Make sure to include related items
+                .ToListAsync();
+
+            // Map the categories to CategoryDto and their items to ItemDto
+            var categoryDtos = categories.Select(category => new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Items = category.Items.Select(item => new ItemDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price
+                }).ToList()
+            }).ToList();
+
+            return categoryDtos;
         }
 
         // GET: api/Categories/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Category>> GetCategory(int id)
+        public async Task<ActionResult<CategoryDto>> GetCategory(int id)
         {
-            var category = await _context.Categories.FindAsync(id);
+            var category = await _context.Categories
+                .Include(c => c.Items)  // Include related items
+                .FirstOrDefaultAsync(c => c.Id == id);
 
             if (category == null)
             {
                 return NotFound();
             }
 
-            return category;
+            // Map category to CategoryDto and its items to ItemDto
+            var categoryDto = new CategoryDto
+            {
+                Id = category.Id,
+                Name = category.Name,
+                Items = category.Items.Select(item => new ItemDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price
+                }).ToList()
+            };
+
+            return categoryDto;
         }
 
         // PUT: api/Categories/5

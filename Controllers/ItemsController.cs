@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ShoppingListTracker.Models;
+using ShoppingListTracker.Models.DTO;
 
 namespace ShopList.Controllers
 {
@@ -22,23 +23,46 @@ namespace ShopList.Controllers
 
         // GET: api/Items
         [HttpGet]
-        public async Task<ActionResult<IEnumerable<Item>>> GetItems()
+        public async Task<ActionResult<IEnumerable<ItemDto>>> GetItems()
         {
-            return await _context.Items.ToListAsync();
+            var items = await _context.Items
+                .Include(item => item.Category) // Eager load Category to include category details
+                .Select(item => new ItemDto
+                {
+                    Id = item.Id,
+                    Name = item.Name,
+                    Quantity = item.Quantity,
+                    Price = item.Price,
+                   
+                })
+                .ToListAsync();
+
+            return Ok(items);
         }
 
         // GET: api/Items/5
         [HttpGet("{id}")]
-        public async Task<ActionResult<Item>> GetItem(int id)
+        public async Task<ActionResult<ItemDto>> GetItem(int id)
         {
-            var item = await _context.Items.FindAsync(id);
+            var item = await _context.Items
+                .Include(i => i.Category)
+                .Where(i => i.Id == id)
+                .Select(i => new ItemDto
+                {
+                    Id = i.Id,
+                    Name = i.Name,
+                    Quantity = i.Quantity,
+                    Price = i.Price,
+                 
+                })
+                .FirstOrDefaultAsync();
 
             if (item == null)
             {
                 return NotFound();
             }
 
-            return item;
+            return Ok(item);
         }
 
         // PUT: api/Items/5
